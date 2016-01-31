@@ -306,10 +306,9 @@ class CreateBdxProject(bpy.types.Operator):
 
     def clean_project_files(self):
 
+        ''' remove unnecessary subproject folder '''
         sc_bdx = bpy.context.scene.bdx
 
-        ''' if there is no andriod project assets are located 
-        in the core/assets folder '''
         if (not sc_bdx.proj_android ):
             shutil.rmtree(j(ut.project_root(), "android"))
             
