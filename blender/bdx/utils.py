@@ -23,7 +23,7 @@ def project_name():
     with open(p.join(project_root(), "build.gradle")) as f:
         for line in f.readlines():
             if "appName" in line:
-                _, name, *_ = line.split("'")
+                _, name, * _= line.split("'")
                 return name
 
 
@@ -99,8 +99,8 @@ def replace_line_containing(file_path, pattern, new_line):
         f.writelines(lines)
 
 
-def in_bdx_project():
-    return p.isdir(p.join(project_root(), "android", "assets", "bdx"))
+def in_bdx_project(asset_folder):
+    return p.isdir(p.join(project_root(), asset_folder, "assets", "bdx"))
 
 def dict_delta(d, dp):
     return {k: dp[k] for k in set(dp) - set(d)}

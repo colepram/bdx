@@ -10,6 +10,10 @@ class BdxSceneProps(bpy.types.PropertyGroup):
     base_path = P.StringProperty(name="Base Path", subtype="DIR_PATH")
     dir_name = P.StringProperty(name="Directory")
     android_sdk = P.StringProperty(name="Android SDK", subtype="DIR_PATH")
+    proj_desktop = P.BoolProperty(name="Desktop", default=True)
+    proj_android = P.BoolProperty(name="android", default=True)
+    proj_ios = P.BoolProperty(name="iOS", default=True)
+    proj_html = P.BoolProperty(name="HTML", default=True)
     
 class BdxObjectProps(bpy.types.PropertyGroup):
     cls_use_custom = P.BoolProperty(name="", description="Use custom Java class for this object")
@@ -23,7 +27,6 @@ bpy.types.Object.bdx = P.PointerProperty(type=BdxObjectProps)
 
 prop_move_support = sum([n * pow(10, i) for n, i in zip(bpy.app.version, (4, 2, 0))]) >= 27500
 
-
 class BdxProject(bpy.types.Panel):
     """Crates the BDX panel in the render properties window"""
     bl_idname = "RENDER_PT_bdx"
@@ -36,8 +39,8 @@ class BdxProject(bpy.types.Panel):
         layout = self.layout
 
         r = layout.row
-
-        if ut.in_bdx_project():
+     
+        if ut.in_bdx_project("android") | ut.in_bdx_project("core"):
             r().label(text="In BDX project: " + ut.project_name())
 
             r().operator("object.bdxexprun")
@@ -55,6 +58,16 @@ class BdxProject(bpy.types.Panel):
                 r().prop(sc_bdx, "base_path")
                 r().prop(sc_bdx, "dir_name")
                 r().prop(sc_bdx, "android_sdk")
+                r().label(text="Sub Projects")
+
+                split = layout.split()
+                col = split.column()
+                col.prop(sc_bdx, "proj_desktop")
+                col.prop(sc_bdx, "proj_ios")
+
+                col = split.column()
+                col.prop(sc_bdx, "proj_android")
+                col.prop(sc_bdx, "proj_html")
 
             r().operator("scene.create_bdx_project", text="Create BDX project")
 
@@ -141,7 +154,7 @@ def register():
 
         kmi = bpy.data.window_managers["WinMan"].keyconfigs["Blender"].keymaps["Object Mode"].keymap_items
 
-        if ut.in_bdx_project():
+        if ut.in_bdx_project("android") | ut.in_bdx_project("core"):
             if "view3d.game_start" in kmi:
                 kmi["view3d.game_start"].idname = "object.bdxexprun"
         else:

@@ -2,7 +2,8 @@
 	<property name="src.dir" value="src"/>
 	<property name="build.dir" value="build"/>
 
-	<property name="libs.dir" value="blender/bdx/libs"/>
+	<property name="base.dir" value="blender/"/>
+	<property name="libs.dir" value="${base.dir}/bdx/libs"/>
 
 	<property name="modules" value="${user.home}/.gradle/caches/modules-2/files-2.1" />
 
@@ -67,7 +68,7 @@
 			inheritAll="false"
 			target="clean"/>
 	</target>
-
+	
 	<target name="clean-all" depends="clean,clean-deps" description="clean + clean-deps">
 	</target>
 

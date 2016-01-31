@@ -16,13 +16,16 @@ class PackBdxProject(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def execute(self, context):
+        
+        assets_folder = "android" if os.path.isdir(j(proot, "desktop")) else "core"
+        
         # save file (so we don't lose data when we reload below)
         bpy.ops.wm.save_mainfile()
 
         # load in audio
         j = os.path.join
 
-        audio_dir = j(ut.project_root(), "android", "assets", "bdx", "audio")
+        audio_dir = j(ut.project_root(), assets_folder, "assets", "bdx", "audio")
         sounds = ut.listdir(j(audio_dir, "sounds"))
         music = ut.listdir(j(audio_dir, "music"))
 

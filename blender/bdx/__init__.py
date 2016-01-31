@@ -10,7 +10,7 @@ bl_info = {
     "author": "Goran Milovanovic",
     "blender": (2, 7, 1),
     "location": "File > Import-Export",
-    "description": "Export scene to BDX (.bdx) file.",
+    "description": "Export scene to BDX (.bdx)",
     "wiki_url": "",
     "tracker_url": "",
     "support": 'TESTING',

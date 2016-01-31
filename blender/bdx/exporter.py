@@ -739,7 +739,12 @@ scene = None;
 
 def export(context, filepath, scene_name, exprun):
     global scene;
+ 
     scene = bpy.data.scenes[scene_name] if scene_name else context.scene
+    j = os.path.join
+
+    proot = ut.project_root()
+    assets_folder = "android" if os.path.isdir(j(proot, "android")) else "core"
 
     objects = list(scene.objects)
 
@@ -780,7 +785,7 @@ def export(context, filepath, scene_name, exprun):
     if exprun:
         j = os.path.join
 
-        bdx_dir = j(ut.project_root(), "android", "assets", "bdx")
+        bdx_dir = j(ut.project_root(), assets_folder, "assets", "bdx")
         fonts_dir = j(bdx_dir, "fonts")
         textures_dir = j(bdx_dir, "textures")
         hiero_dir = j(ut.gen_root(), "hiero")

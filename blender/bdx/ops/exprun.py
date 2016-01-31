@@ -10,11 +10,15 @@ class BdxExpRun(bpy.types.Operator):
     bl_label = "Export and Run"
 
     def execute(self, context):
+        
         j = os.path.join
 
         proot = ut.project_root()
         sroot = ut.src_root()
-        asset_dir = j(proot, "android", "assets", "bdx")
+
+        assets_folder = "android" if os.path.isdir(j(proot, "android", "assets")) else "core"
+        asset_dir = j(proot, assets_folder, "assets", "bdx")
+
         prof_scene_name = "__Profiler"
 
         # Check if profiler scene exists:
@@ -87,15 +91,17 @@ class BdxExpRun(bpy.types.Operator):
         rx = str(scene.render.resolution_x)
         ry = str(scene.render.resolution_y)
 
-        dl = j(ut.src_root("desktop", "DesktopLauncher.java"), "DesktopLauncher.java")
-        ut.set_file_var(dl, "title", '"'+ut.project_name()+'"')
-        ut.set_file_var(dl, "width", rx)
-        ut.set_file_var(dl, "height", ry)
+        if os.path.isdir(j(proot, "desktop")):
+            dl = j(ut.src_root("desktop", "DesktopLauncher.java"), "DesktopLauncher.java")
+            ut.set_file_var(dl, "title", '"'+ut.project_name()+'"')
+            ut.set_file_var(dl, "width", rx)
+            ut.set_file_var(dl, "height", ry)
 
-        # - AndroidLauncher.java
-        al = j(ut.src_root("android", "AndroidLauncher.java"), "AndroidLauncher.java")
-        ut.set_file_var(al, "width", rx)
-        ut.set_file_var(al, "height", ry)
+        if os.path.isdir(j(proot, "android")):
+            # - AndroidLauncher.java
+            al = j(ut.src_root("android", "AndroidLauncher.java"), "AndroidLauncher.java")
+            ut.set_file_var(al, "width", rx)
+            ut.set_file_var(al, "height", ry)
 
         # Run engine:
         context.window.cursor_set("WAIT")

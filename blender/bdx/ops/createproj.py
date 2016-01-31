@@ -45,9 +45,16 @@ class CreateBdxProject(bpy.types.Operator):
         ut.proot = fmt["dir"]
 
 
-    def create_android_assets_bdx(self):
+    def create_libgdx_assets_bdx(self, asset_folder):
         """Creates the bdx directory structure in android/assets"""
-        bdx = j(ut.project_root(), "android", "assets", "bdx")
+
+        root_folder = j(ut.project_root(), asset_folder)
+        asset = j(root_folder, "assets")
+        if (not os.path.isdir(asset)):
+            os.mkdir(asset)
+
+        bdx = j(asset, "bdx")
+        
         os.mkdir(bdx)
         os.mkdir(j(bdx, "scenes"))
         textures = j(bdx, "textures")
@@ -87,12 +94,81 @@ class CreateBdxProject(bpy.types.Operator):
 
     def replace_build_gradle(self):
         """Replaces the build.gradle file with a version that includes BDX dependencies"""
-        bdx_build_gradle = j(ut.gen_root(), "build.gradle")
-        gdx_build_gradle = j(ut.project_root(), "build.gradle")
-        shutil.copy(bdx_build_gradle, gdx_build_gradle)
 
         sc_bdx = bpy.context.scene.bdx
+        
+        bdx_build_gradle = j(ut.gen_root(), "build.gradle")
+        gdx_build_gradle = j(ut.project_root(), "build.gradle")
+        '''shutil.copy(bdx_build_gradle, gdx_build_gradle)'''
+
+        if os.path.isfile(gdx_build_gradle):
+            os.remove(gdx_build_gradle)
+
+        bdx_input = open(bdx_build_gradle, "r", 1)
+        bdx_output = open(gdx_build_gradle, "w")
+
+        '''
+        The main build.gradle file needs to be updated it's copied from an internal build.gradle file
+            I use a writer flag to figure out what parts of the file should be copied
+            
+            For example when the 'project("android") {' string shows up, but the sc_bdx.proj_android
+            boolean is false then the writer stops copying until it gets to the next tag to start again
+            
+            The 'project("core") {' string always sets the writer flag back on.
+        '''
+        writing = True
+        for line in bdx_input.readlines():
+            if ("project(\":desktop\") {" in line):
+                writing = sc_bdx.proj_desktop
+            elif ("project(\":android\") {" in line):
+                writing = sc_bdx.proj_android
+            elif ("project(\":ios\") {" in line):
+                writing = sc_bdx.proj_ios
+            elif ("project(\":html\") {" in line):
+                writing = sc_bdx.proj_html
+            elif ("project(\":core\") {" in line):
+                writing = True
+            
+            if writing:
+                bdx_output.write(line)
+        
+        bdx_input.close()
+        bdx_output.close()
+        
         ut.set_file_var(gdx_build_gradle, "appName", "'{}'".format(sc_bdx.proj_name))
+        
+        '''if android is not a selected project then the assets path needs to be updated in the desktop project'''
+        if (not sc_bdx.proj_android & sc_bdx.proj_desktop):
+            bdx_desktop_path = j(ut.project_root(), "desktop/build.gradle")
+            bdx_desktop_tmp_path = j(ut.project_root(), "desktop/build.gradle.tmp")
+            bdx_desktop_build_gradle = open(bdx_desktop_path, "r", 1)
+            bdx_desktop_build_gradle_tmp = open(bdx_desktop_tmp_path, "w")
+            for line in bdx_desktop_build_gradle:
+                bdx_desktop_build_gradle_tmp.write(line.replace("android/assets", "core/assets"))
+                
+            bdx_desktop_build_gradle.close()
+            bdx_desktop_build_gradle_tmp.close()
+            
+            shutil.copy(bdx_desktop_tmp_path, bdx_desktop_path)
+            
+            os.remove(bdx_desktop_tmp_path)
+            
+        ''' this file doesn't seem to have any effect, but might as well updated it with the '''
+        
+        settings_line = "include 'core'"
+        if sc_bdx.proj_desktop:
+            settings_line = settings_line + ", 'desktop'"
+        if sc_bdx.proj_android:
+            settings_line = settings_line + ", 'android'"
+        if sc_bdx.proj_ios:
+            settings_line = settings_line + ", 'ios'"
+        if sc_bdx.proj_html:
+            settings_line = settings_line + ", 'html'"
+            
+        bdx_settings_update = open(j(ut.project_root(), "settings.gradle"), "w")
+        bdx_settings_update.write(settings_line)
+        bdx_settings_update.close()
+
 
     def set_android_sdk_version(self):
         """
@@ -177,8 +253,8 @@ class CreateBdxProject(bpy.types.Operator):
         except RuntimeError as e:
             print(e)
 
-    def fix_texture_links(self):
-        textures = j(ut.project_root(), "android", "assets", "bdx", "textures")
+    def fix_texture_links(self, assets_folder):
+        textures = j(ut.project_root(), assets_folder, "assets", "bdx", "textures")
         bpy.ops.file.find_missing_files(directory=textures)
 
     def update_bdx_xml(self):
@@ -189,7 +265,7 @@ class CreateBdxProject(bpy.types.Operator):
     def make_current_blend_default(self):
         shutil.move(bpy.data.filepath, j(ut.project_root(), "blender", "game.blend"))
 
-    def unpack_resources(self):
+    def unpack_resources(self, assets_folder):
         # sort out music from sound
         def _music(s):
             head, tail = os.path.split(s.filepath)
@@ -207,7 +283,7 @@ class CreateBdxProject(bpy.types.Operator):
         proot = ut.project_root()
         unpacked_textures = j(proot, "blender", "textures") 
         if os.path.isdir(unpacked_textures):
-            bdx = j(proot, "android", "assets", "bdx")
+            bdx = j(proot, assets_folder, "assets", "bdx")
             shutil.rmtree(j(bdx, "textures"))
             shutil.move(unpacked_textures, bdx)
 
@@ -228,35 +304,71 @@ class CreateBdxProject(bpy.types.Operator):
         sacky_java = bpy.data.texts["Sacky.java"]
         sacky_java.lines[0].body = "package " + ut.package_name() + ';'
 
+    def clean_project_files(self):
 
+        sc_bdx = bpy.context.scene.bdx
+
+        ''' if there is no andriod project assets are located 
+        in the core/assets folder '''
+        if (not sc_bdx.proj_android ):
+            shutil.rmtree(j(ut.project_root(), "android"))
+            
+        if (not sc_bdx.proj_html):
+            shutil.rmtree(j(ut.project_root(), "html"))
+
+        if (not sc_bdx.proj_ios):
+            shutil.rmtree(j(ut.project_root(), "ios"))
+
+        if (not sc_bdx.proj_desktop):
+            shutil.rmtree(j(ut.project_root(), "desktop"))
+
+        
     def execute(self, context):
         context.window.cursor_set("WAIT")
 
+        sc_bdx = bpy.context.scene.bdx
+
+        assets_folder = "android" if sc_bdx.proj_android else "core"
+
         self.create_libgdx_project()
-        self.create_android_assets_bdx()
+        self.create_libgdx_assets_bdx(assets_folder)
+        
         self.create_blender_assets()
         self.replace_build_gradle()
-        self.set_android_sdk_version()
+        
+        if sc_bdx.proj_android:
+            self.set_android_sdk_version()
+
         self.replace_app_class()
-        self.replace_desktop_launcher()
-        self.replace_android_launcher()
+        
+        if sc_bdx.proj_desktop:
+            self.replace_desktop_launcher()
+        
+        if sc_bdx.proj_android:
+            self.replace_android_launcher()
+        
         self.copy_bdx_libs()
         self.update_bdx_xml()
+
+        print("Project Clean Up")
+        
+        self.clean_project_files();
 
         if ut.in_packed_bdx_blend():
             self.make_current_blend_default()
             self.open_default_blend()
-            self.unpack_resources()
+            self.unpack_resources(assets_folder)
+
         else:
             self.open_default_blend()
             self.set_internal_package()
 
-        self.fix_texture_links()
+        #context.window.cursor_set("DEFAULT")
+
+        self.fix_texture_links(assets_folder)
         bpy.ops.wm.save_mainfile()
 
         ut.proot = None
-
-        #context.window.cursor_set("DEFAULT")
 
         return {'FINISHED'}
 
