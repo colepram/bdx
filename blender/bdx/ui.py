@@ -11,7 +11,7 @@ class BdxSceneProps(bpy.types.PropertyGroup):
     dir_name = P.StringProperty(name="Directory")
     android_sdk = P.StringProperty(name="Android SDK", subtype="DIR_PATH")
     proj_desktop = P.BoolProperty(name="Desktop", default=True)
-    proj_android = P.BoolProperty(name="android", default=True)
+    proj_android = P.BoolProperty(name="Android", default=True)
     proj_ios = P.BoolProperty(name="iOS", default=True)
     proj_html = P.BoolProperty(name="HTML", default=True)
     
